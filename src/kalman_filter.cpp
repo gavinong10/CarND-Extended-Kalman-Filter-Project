@@ -55,9 +55,25 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
 
   double px_py_norm = sqrt(px * px + py * py);
 
-  h_x << px_py_norm, atan(py / px), px * vx + py * vy / px_py_norm;
+  h_x << px_py_norm, atan2(py, px), (px * vx + py * vy) / px_py_norm;
+
+  // Handle case where distance of detected object is zero to avoid divisions by zero
+  float eps = 1e-4;
+
+  if (fabsf(px) < eps) {
+    h_x(1) = 0;
+  }
 
   VectorXd y = z - h_x;
+
+  // Normalize result
+  while (y[1] > M_PI) {
+    y[1] -= 2 * M_PI;
+  }
+  while (y[1] < -M_PI) {
+    y[1] += 2 * M_PI;
+  }
+
   MatrixXd S = H_ * P_ * H_.transpose() + R_;
   MatrixXd K = P_ * H_.transpose() * S.inverse();
   x_ = x_ + K * y;
